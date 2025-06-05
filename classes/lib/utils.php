@@ -281,10 +281,10 @@ class utils {
      */
     public static function timespent($courseid, $userid, $rawformat=false) {
         global $DB;
-        $totaldedication = $DB->get_field_sql("SELECT SUM(timespent)
-                                               FROM {block_dedication}
-                                               WHERE courseid = ? AND userid = ?",
-                                              ['courseid' => $courseid, 'userid' => $userid]);
+        $totaldedication = $DB->get_field_sql(
+        "SELECT SUM(timespent) FROM {block_dedication} WHERE courseid = ? AND userid = ?",
+            ['courseid' => $courseid, 'userid' => $userid]
+        );
         if ($rawformat) {
             return $totaldedication;
         } else {
@@ -300,47 +300,126 @@ class utils {
      * @param bool $filter
      * @return array
      */
-    public static function get_average($courseid, $duration = null, bool $filter = false) {
+    public static function get_average($courseid, $duration = null, bool $filter = false):array {
+        // Access global Moodle core variables.
         global $DB, $CFG, $SESSION;
 
-        $params = ['courseid' => $courseid];
-        $sqlextra = '';
+        // Get selected Role IDs from Dedication settings list
+        $dedicationrolespecify = get_config('block_dedication','rolespecify');
+        // Convert String value to Integer to be used in Select query.
+        $roleids = array_map('intval', explode(',', $dedicationrolespecify));
+        list($roleidsql, $params_roleids) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED);
+
+        $params = [
+            'courseid_bd' => $courseid,
+            'courseid_e' => $courseid,
+            'courseid_ctx' => $courseid
+        ];
+
+        $params = array_merge($params, $params_roleids);
+
         if (!empty($duration)) {
             $sqlextra = " AND timestart > :since";
             $params['since'] = time() - $duration;
         }
 
         if (!empty($SESSION->local_ace_filtervalues) && $filter && file_exists($CFG->dirroot . '/local/ace/locallib.php')) {
+
             require_once($CFG->dirroot . '/local/ace/locallib.php');
+
             list($joinsql, $wheresql, $filterparams) = local_ace_generate_filter_sql($SESSION->local_ace_filtervalues);
 
             $sqltotal = "SELECT SUM(bd.timespent)
-                        FROM {block_dedication} bd
-                        JOIN {user} u ON u.id = bd.userid
-                        " . implode(" ", $joinsql) . "
-                        WHERE bd.courseid = :courseid" . $sqlextra . "
-                        " . implode(" ", $wheresql);
+                FROM {role} r
+                JOIN {role_assignments} ra ON ra.roleid = r.id
+                JOIN {context} ctx ON ctx.id = ra.contextid
+                JOIN {user} u ON u.id = ra.userid AND u.deleted = 0
+                JOIN {block_dedication} bd ON bd.userid = u.id
+                ".implode(" ", $joinsql)."
+                WHERE bd.courseid = :courseid_bd".$sqlextra."
+                AND r.id ".$roleidsql."
+                AND ctx.contextlevel = 50
+                AND ctx.instanceid = :courseid_ctx
+                ".implode(" ", $wheresql);
+
             $sqlusers = "SELECT count(DISTINCT bd.userid)
-                        FROM {block_dedication} bd
-                        JOIN {user} u ON u.id = bd.userid
-                        " . implode(" ", $joinsql) . "
-                        WHERE bd.courseid = :courseid" . $sqlextra . "
-                        " . implode(" ", $wheresql);
+                FROM {role} r
+                JOIN {role_assignments} ra ON ra.roleid = r.id
+                JOIN {context} ctx ON ctx.id = ra.contextid
+                JOIN {user} u ON u.id = ra.userid AND u.deleted = 0
+                JOIN {block_dedication} bd ON bd.userid = u.id
+                ".implode(" ", $joinsql)."
+                WHERE bd.courseid = :courseid_bd".$sqlextra."
+                AND r.id ".$roleidsql."
+                AND ctx.contextlevel = 50
+                AND ctx.instanceid = :courseid_ctx
+                ".implode(" ", $wheresql);
+
             $params = array_merge($params, $filterparams);
-            $totaldedication = $DB->get_field_sql($sqltotal, $params);
-            $totalusers = $DB->get_field_sql($sqlusers, $params);
+
         } else {
-            $sqltotal = "SELECT SUM(timespent)
-                       FROM {block_dedication}
-                      WHERE courseid = :courseid" . $sqlextra;
-            $sqlusers = "SELECT count(DISTINCT userid)
-                       FROM {block_dedication}
-                      WHERE courseid = :courseid" . $sqlextra;
-            $totaldedication = $DB->get_field_sql($sqltotal, $params);
-            $totalusers = $DB->get_field_sql($sqlusers, $params);
+
+            $sqltotal = "SELECT SUM(bd.timespent)
+                FROM {role} r
+                JOIN {role_assignments} ra ON ra.roleid = r.id
+                JOIN {context} ctx ON ctx.id = ra.contextid
+                JOIN {user} u ON u.id = ra.userid
+                JOIN {block_dedication} bd ON bd.userid = u.id
+                WHERE bd.courseid = :courseid_bd".$sqlextra."
+                AND r.id ".$roleidsql."
+                AND ctx.contextlevel = 50
+                AND ctx.instanceid = :courseid_ctx";
+
+            $sqlusers = "SELECT COUNT(DISTINCT bd.userid)
+                FROM {role} r
+                JOIN {role_assignments} ra ON ra.roleid = r.id
+                JOIN {context} ctx ON ctx.id = ra.contextid
+                JOIN {user} u ON u.id = ra.userid
+                JOIN {block_dedication} bd ON bd.userid = u.id
+                WHERE bd.courseid = :courseid_bd".$sqlextra."
+                AND r.id ".$roleidsql."
+                AND ctx.contextlevel = 50
+                AND ctx.instanceid = :courseid_ctx";
+
         }
 
-        return ['total' => self::format_dedication($totaldedication),
-                'average' => self::format_dedication(!empty($totalusers) ? $totaldedication / $totalusers : 0)];
+        $totaldedication = $DB->get_field_sql($sqltotal, $params);
+        $totalusers = $DB->get_field_sql($sqlusers, $params);
+
+        // Get the role names used to calculate the average dedicated time for the course.
+        $rolequery = "SELECT * FROM {role} WHERE id ".$roleidsql;
+        $rolerecords = $DB->get_records_sql($rolequery, $params_roleids);
+        // Create empty variable to house role names
+        $roles = '';
+        // Get a count of roles, used to help format text returned.
+        $rolescount = count($rolerecords);
+        // Be aware of the last key in the array, further formating in text returned.
+        $lastrole = array_key_last($rolerecords);
+        // Loop through all the roles.
+        foreach ($rolerecords as $rolekey => $roledata) {
+            if ($rolekey !== $lastrole) {
+                // If not the last key in the array, append string to role name for nice formatting.
+                $roles .= $roledata->name . ', ';
+            }else{
+                // If the last/only key in array, ensure not trail empty space and comma present.
+                $roles = rtrim(trim($roles), ',');
+                // Confirm array count
+                if($rolescount > 1){
+                    // If array is larger than 1 key, close $roles string correctly.
+                    $roles .= ' and '.$roledata->name;
+                }else {
+                    // Expecting only one key array, simply list the role for better reading.
+                    $roles .= $roledata->name;
+                }
+            }
+        }
+
+        return [
+            'total' => self::format_dedication($totaldedication),
+            'average' => self::format_dedication(!empty($totalusers) ? $totaldedication / $totalusers : 0),
+            'totalusers' => $totalusers,
+            'selectedroles' => $roles,
+            'rolecount' => $rolescount,
+        ];
     }
 }

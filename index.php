@@ -50,20 +50,34 @@ $PAGE->set_heading($course->fullname);
 echo $OUTPUT->header();
 $average = \block_dedication\lib\utils::get_average($course->id);
 
+echo html_writer::start_div('course_dedication_information');
 echo $OUTPUT->heading(get_string('timespentincourse', 'block_dedication'));
-echo html_writer::div(get_string('totaltimespent', 'block_dedication', $average['total']));
-echo html_writer::div(get_string('averagetimespent', 'block_dedication', $average['average']));
 
+if($average['rolecount'] > 1) {
+    echo html_writer::tag('span', get_string('listofselectedroles', 'block_dedication', $average['selectedroles']),["id" => "selected-roles", "class"=> "d-block"]);
+}else{
+    echo html_writer::tag('span', get_string('selectedrole', 'block_dedication', $average['selectedroles']),["id" => "selected-roles", "class"=> "d-block"]);
+}
+echo html_writer::tag('span', get_string('totalusercount', 'block_dedication', $average['totalusers']),["id" => "total-users-count", "class"=> "d-block"]);
+echo html_writer::tag('span', get_string('totaltimespent', 'block_dedication', $average['total']),["id" => "total-averages", "class"=> "d-block"]);
+echo html_writer::tag('span', get_string('averagetimespent', 'block_dedication', $average['average']),["id" => "average-time","class"=> "d-block"]);
 $config = get_config('block_dedication');
 
 if (!empty($config->ignore_sessions_limit)) {
-    echo html_writer::div(get_string('excludesessionslessthan', 'block_dedication',
-                              utils::format_dedication($config->ignore_sessions_limit)));
+    echo html_writer::tag(
+'span',
+        get_string('excludesessionslessthan', 'block_dedication', utils::format_dedication($config->ignore_sessions_limit)),
+        ["id" => "exclude-sessions","class"=> "d-block"]
+    );
 }
 if (!empty($config->lastcalculated)) {
-    echo html_writer::span(get_string('lastupdated', 'block_dedication',
-        userdate($config->lastcalculated, get_string('strftimedatetimeshort', 'core_langconfig'))), 'dimmed_text');
+    echo html_writer::tag(
+'span',
+        get_string('lastupdated', 'block_dedication', userdate($config->lastcalculated, get_string('strftimedatetimeshort', 'core_langconfig'))),
+        ["id" => "last-updated","class"=> "d-block dimmed_text"]
+    );
 }
+echo html_writer::end_div();
 
 $report = system_report_factory::create(course::class, context_course::instance($courseid));
 

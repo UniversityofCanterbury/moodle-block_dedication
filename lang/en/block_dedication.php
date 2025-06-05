@@ -93,3 +93,9 @@ $string['sessiondurationsum'] = 'Session duration (sum)';
 $string['enrolmententity'] = 'Enrolment';
 $string['enrolmentmethod'] = 'Enrolment method';
 $string['timespenttasknotrunning'] = 'Time spent calculation task has not run yet.';
+
+$string['rolespecify'] = 'Select Roles';
+$string['rolespecifydescription'] = 'Select Roles that need to be included in the Average time spent in the course.';
+$string['selectedrole'] = '<strong>The average is calculated based only on users who have the role:</strong> {$a}';
+$string['listofselectedroles'] = '<strong>The average is calculated based only on users who have the following roles:</strong> {$a}';
+$string['totalusercount'] = '<strong>Total users in this average calculation:</strong> {$a}';

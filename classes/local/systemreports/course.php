@@ -53,16 +53,26 @@ class course extends system_report {
         $enrolmententity = new enrolment();
         $userenrolment = $enrolmententity->get_table_alias('user_enrolments');
         $enrol = $enrolmententity->get_table_alias('enrol');
-        $enroljoin = "LEFT JOIN {enrol} {$enrol} ON {$enrol}.courseid = {$course}.id";
-        $userenrolmentjoin = " LEFT JOIN {user_enrolments} {$userenrolment} ON {$userenrolment}.enrolid = {$enrol}.id";
+        $enroljoin = "JOIN {enrol} {$enrol} ON {$enrol}.courseid = {$course}.id";
+        $userenrolmentjoin = "JOIN {user_enrolments} {$userenrolment} ON {$userenrolment}.enrolid = {$enrol}.id";
         $enrolmententity->add_joins([$enroljoin, $userenrolmentjoin]);
         $this->add_entity($enrolmententity);
 
         // Join user entity.
         $userentity = new user();
         $user = $userentity->get_table_alias('user');
+
+        // Add in new Role and context joins.
+        $roleassignmentsalias = 'ra';
+        $rolealias = 'r';
+        $contextalias = 'ctx';
+
         $userentity->add_joins([$enroljoin, $userenrolmentjoin]);
         $userentity->add_join("LEFT JOIN {user} {$user} ON {$userenrolment}.userid = {$user}.id AND {$user}.deleted = 0");
+        // Add in new joins
+        $userentity->add_join("JOIN {role_assignments} {$roleassignmentsalias} ON {$roleassignmentsalias}.userid = {$user}.id");
+        $userentity->add_join("JOIN {role} {$rolealias} ON {$rolealias}.id = {$roleassignmentsalias}.roleid");
+        $userentity->add_join("JOIN {context} {$contextalias} ON {$contextalias}.id = {$roleassignmentsalias}.contextid");
         $this->add_entity($userentity);
 
         $this->add_base_fields("{$user}.id as userid");
@@ -72,9 +82,9 @@ class course extends system_report {
         // Note: rather than joining normally, we have to do a subselect so we can get the SUM() aggregation.
         // In future once MDL-76392 lands, we should be able to do this better.
         $dedicationentity->add_join("JOIN (
-                                   SELECT SUM(timespent) as timespent, userid, courseid
-                                     FROM {block_dedication} GROUP BY userid, courseid) {$dedicationalias} ON
-                                          {$dedicationalias}.userid = {$user}.id and {$dedicationalias}.courseid = {$course}.id");
+            SELECT SUM(timespent) as timespent, userid, courseid
+            FROM {block_dedication} GROUP BY userid, courseid) {$dedicationalias} ON
+            {$dedicationalias}.userid = {$user}.id and {$dedicationalias}.courseid = {$course}.id");
         $this->add_entity($dedicationentity);
 
         $groupnamesssql = $DB->sql_group_concat('gr.name', ', ');
@@ -105,21 +115,38 @@ class course extends system_report {
         }
 
         $groupsentity->add_join("$groupjointype (
-                            SELECT gm.userid, gr.courseid, $groupidssql groupids, $groupnamesssql groupnames
-                            FROM {groups_members} gm
-                            JOIN {groups} gr ON gr.id = gm.groupid
-                            $vglikesql
-                            GROUP BY gm.userid, gr.courseid
-                        ) $groupsalias
-                        ON $groupsalias.userid = {$user}.id AND $groupsalias.courseid = {$course}.id");
+            SELECT gm.userid, gr.courseid, $groupidssql groupids, $groupnamesssql groupnames
+            FROM {groups_members} gm
+            JOIN {groups} gr ON gr.id = gm.groupid
+            $vglikesql
+            GROUP BY gm.userid, gr.courseid
+        ) $groupsalias
+        ON $groupsalias.userid = {$user}.id AND $groupsalias.courseid = {$course}.id");
 
         $this->add_entity($groupsentity);
 
         $param1 = database::generate_param_name();
-        $wheresql = "$course.id = :$param1";
+        $param2 = database::generate_param_name();
 
-        $this->add_base_condition_sql($wheresql,
-            [$param1 => $courserecord->id]);
+        // WHERE conditions for course context and block_dedication courseid.
+        $wheresql = "{$dedicationalias}.courseid = :$param1 AND {$contextalias}.contextlevel = 50 AND {$contextalias}.instanceid = :$param2";
+        $params = [
+                $param1 => $courserecord->id,
+                $param2 => $courserecord->id
+        ];
+
+        // Get selected Role IDs from Dedication settings list
+        $dedicationrolespecify = get_config('block_dedication','rolespecify');
+        // Convert String value to Integer to be used in Select query.
+        $roleids = array_map('intval', explode(',', $dedicationrolespecify));
+        $roleidsparam = database::generate_param_name();
+
+        list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED,$roleidsparam);
+
+        $wheresql .= " AND {$rolealias}.id {$rolesql}";
+        $params = array_merge($params, $roleparams);
+
+        $this->add_base_condition_sql($wheresql, $params);
 
         // Now we can call our helper methods to add the content we want to include in the report.
         $this->add_columns();
@@ -133,7 +160,8 @@ class course extends system_report {
         if (has_capability('report/log:view', \context_course::instance($courserecord->id))) {
             $this->add_action((new action(
                 new moodle_url('/report/log/user.php', ['id' => ":userid", 'course' => $courserecord->id, 'mode' => 'all']),
-                new pix_icon('i/search', get_string('alllogs')))));
+                new pix_icon('i/search', get_string('alllogs'))
+            )));
         }
 
         // Set if report can be downloaded.
