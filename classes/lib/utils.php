@@ -303,7 +303,6 @@ class utils {
     public static function get_average($courseid, $duration = null, bool $filter = false):array {
         // Access global Moodle core variables.
         global $DB, $CFG, $SESSION;
-
         // Get selected Role IDs from Dedication settings list
         $dedicationrolespecify = get_config('block_dedication','rolespecify');
         // Convert String value to Integer to be used in Select query.
@@ -311,9 +310,7 @@ class utils {
         list($roleidsql, $params_roleids) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED);
 
         $params = [
-            'courseid_bd' => $courseid,
-            'courseid_e' => $courseid,
-            'courseid_ctx' => $courseid
+            'courseid' => $courseid,
         ];
 
         $params = array_merge($params, $params_roleids);
@@ -330,56 +327,46 @@ class utils {
             list($joinsql, $wheresql, $filterparams) = local_ace_generate_filter_sql($SESSION->local_ace_filtervalues);
 
             $sqltotal = "SELECT SUM(bd.timespent)
-                FROM {role} r
-                JOIN {role_assignments} ra ON ra.roleid = r.id
-                JOIN {context} ctx ON ctx.id = ra.contextid
-                JOIN {user} u ON u.id = ra.userid AND u.deleted = 0
-                JOIN {block_dedication} bd ON bd.userid = u.id
+                FROM {block_dedication} bd
+                JOIN {user} u ON u.id = bd.userid
+                JOIN {role_assignments} ra ON ra.userid = u.id
+                JOIN {course} c ON c.id = bd.courseid
+                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
                 ".implode(" ", $joinsql)."
-                WHERE bd.courseid = :courseid_bd".$sqlextra."
-                AND r.id ".$roleidsql."
-                AND ctx.contextlevel = 50
-                AND ctx.instanceid = :courseid_ctx
-                ".implode(" ", $wheresql);
+                WHERE c.id = :courseid".$sqlextra."
+                AND ra.roleid ".$roleidsql." ".implode(" ", $wheresql);
 
-            $sqlusers = "SELECT count(DISTINCT bd.userid)
-                FROM {role} r
-                JOIN {role_assignments} ra ON ra.roleid = r.id
-                JOIN {context} ctx ON ctx.id = ra.contextid
-                JOIN {user} u ON u.id = ra.userid AND u.deleted = 0
-                JOIN {block_dedication} bd ON bd.userid = u.id
+            $sqlusers = "SELECT COUNT(DISTINCT bd.userid)
+                FROM {block_dedication} bd
+                JOIN {user} u ON u.id = bd.userid
+                JOIN {role_assignments} ra ON ra.userid = u.id
+                JOIN {course} c ON c.id = bd.courseid
+                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
                 ".implode(" ", $joinsql)."
-                WHERE bd.courseid = :courseid_bd".$sqlextra."
-                AND r.id ".$roleidsql."
-                AND ctx.contextlevel = 50
-                AND ctx.instanceid = :courseid_ctx
-                ".implode(" ", $wheresql);
+                WHERE c.id = :courseid".$sqlextra."
+                AND ra.roleid ".$roleidsql." ".implode(" ", $wheresql);
 
             $params = array_merge($params, $filterparams);
 
         } else {
 
             $sqltotal = "SELECT SUM(bd.timespent)
-                FROM {role} r
-                JOIN {role_assignments} ra ON ra.roleid = r.id
-                JOIN {context} ctx ON ctx.id = ra.contextid
-                JOIN {user} u ON u.id = ra.userid
-                JOIN {block_dedication} bd ON bd.userid = u.id
-                WHERE bd.courseid = :courseid_bd".$sqlextra."
-                AND r.id ".$roleidsql."
-                AND ctx.contextlevel = 50
-                AND ctx.instanceid = :courseid_ctx";
+                FROM {block_dedication} bd
+                JOIN {user} u ON u.id = bd.userid
+                JOIN {role_assignments} ra ON ra.userid = u.id
+                JOIN {course} c ON c.id = bd.courseid
+                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
+                WHERE c.id = :courseid".$sqlextra."
+                AND ra.roleid ".$roleidsql;
 
             $sqlusers = "SELECT COUNT(DISTINCT bd.userid)
-                FROM {role} r
-                JOIN {role_assignments} ra ON ra.roleid = r.id
-                JOIN {context} ctx ON ctx.id = ra.contextid
-                JOIN {user} u ON u.id = ra.userid
-                JOIN {block_dedication} bd ON bd.userid = u.id
-                WHERE bd.courseid = :courseid_bd".$sqlextra."
-                AND r.id ".$roleidsql."
-                AND ctx.contextlevel = 50
-                AND ctx.instanceid = :courseid_ctx";
+                FROM {block_dedication} bd
+                JOIN {user} u ON u.id = bd.userid
+                JOIN {role_assignments} ra ON ra.userid = u.id
+                JOIN {course} c ON c.id = bd.courseid
+                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
+                WHERE c.id = :courseid".$sqlextra."
+                AND ra.roleid ".$roleidsql;
 
         }
 
