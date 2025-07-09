@@ -43,4 +43,25 @@ if ($ADMIN->fulltree) {
         new lang_string('allloglifetime', 'block_dedication'),
         new lang_string('configallloglifetime', 'block_dedication'), YEARSECS, PARAM_INT));
 
+    // Retrieve all roles from the Moodle system to populate a multiselect field,
+    // allowing the Site Administrator to choose which roles should be included in the calculation.
+    $moodleroles = $DB->get_records('role');
+
+    // Create storing array based variables.
+    $defaultselection = $roles = [];
+    // Loop through data return and collect roles 'id' and 'name'.
+    foreach ($moodleroles as $role) {
+        $defaultselection[] = $role->id;
+        $roles[$role->id] = $role->name;
+    }
+    asort($roles);
+
+    // Add a multiselect setting field with available roles for selection.
+    $settings->add(new admin_setting_configmultiselect(
+        'block_dedication/rolespecify',
+        get_string('rolespecify', 'block_dedication'),
+        get_string('rolespecifydescription', 'block_dedication'),
+        $defaultselection,
+        $roles
+    ));
 }
