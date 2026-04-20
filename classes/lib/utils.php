@@ -309,14 +309,19 @@ class utils {
         $roleids = array_map('intval', explode(',', $dedicationrolespecify));
         list($roleidsql, $params_roleids) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED);
 
+        // Look up the course context ID once — avoids joining {course} and {context} tables.
+        $contextid = \context_course::instance($courseid)->id;
+
         $params = [
             'courseid' => $courseid,
+            'contextid' => $contextid,
         ];
 
         $params = array_merge($params, $params_roleids);
 
+        $sqlextra = '';
         if (!empty($duration)) {
-            $sqlextra = " AND timestart > :since";
+            $sqlextra = " AND bd.timestart > :since";
             $params['since'] = time() - $duration;
         }
 
@@ -326,52 +331,32 @@ class utils {
 
             list($joinsql, $wheresql, $filterparams) = local_ace_generate_filter_sql($SESSION->local_ace_filtervalues);
 
-            $sqltotal = "SELECT SUM(bd.timespent)
+            // Filter path needs {user} u for filter JOINs that reference u.id / u.idnumber.
+            $sql = "SELECT SUM(bd.timespent) AS total, COUNT(DISTINCT bd.userid) AS usercount
                 FROM {block_dedication} bd
                 JOIN {user} u ON u.id = bd.userid
-                JOIN {role_assignments} ra ON ra.userid = u.id
-                JOIN {course} c ON c.id = bd.courseid
-                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
-                ".implode(" ", $joinsql)."
-                WHERE c.id = :courseid".$sqlextra."
-                AND ra.roleid ".$roleidsql." ".implode(" ", $wheresql);
-
-            $sqlusers = "SELECT COUNT(DISTINCT bd.userid)
-                FROM {block_dedication} bd
-                JOIN {user} u ON u.id = bd.userid
-                JOIN {role_assignments} ra ON ra.userid = u.id
-                JOIN {course} c ON c.id = bd.courseid
-                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
-                ".implode(" ", $joinsql)."
-                WHERE c.id = :courseid".$sqlextra."
-                AND ra.roleid ".$roleidsql." ".implode(" ", $wheresql);
+                JOIN {role_assignments} ra ON ra.contextid = :contextid AND ra.userid = bd.userid
+                " . implode(" ", $joinsql) . "
+                WHERE bd.courseid = :courseid" . $sqlextra . "
+                AND ra.roleid " . $roleidsql . " " . implode(" ", $wheresql);
 
             $params = array_merge($params, $filterparams);
 
         } else {
 
-            $sqltotal = "SELECT SUM(bd.timespent)
+            // Unfiltered path — no need for {user}, {course}, or {context} table JOINs.
+            // block_dedication already has courseid, and we looked up contextid above.
+            $sql = "SELECT SUM(bd.timespent) AS total, COUNT(DISTINCT bd.userid) AS usercount
                 FROM {block_dedication} bd
-                JOIN {user} u ON u.id = bd.userid
-                JOIN {role_assignments} ra ON ra.userid = u.id
-                JOIN {course} c ON c.id = bd.courseid
-                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
-                WHERE c.id = :courseid".$sqlextra."
-                AND ra.roleid ".$roleidsql;
-
-            $sqlusers = "SELECT COUNT(DISTINCT bd.userid)
-                FROM {block_dedication} bd
-                JOIN {user} u ON u.id = bd.userid
-                JOIN {role_assignments} ra ON ra.userid = u.id
-                JOIN {course} c ON c.id = bd.courseid
-                JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.instanceid = bd.courseid
-                WHERE c.id = :courseid".$sqlextra."
-                AND ra.roleid ".$roleidsql;
+                JOIN {role_assignments} ra ON ra.contextid = :contextid AND ra.userid = bd.userid
+                WHERE bd.courseid = :courseid" . $sqlextra . "
+                AND ra.roleid " . $roleidsql;
 
         }
 
-        $totaldedication = $DB->get_field_sql($sqltotal, $params);
-        $totalusers = $DB->get_field_sql($sqlusers, $params);
+        $result = $DB->get_record_sql($sql, $params);
+        $totaldedication = $result->total ?? 0;
+        $totalusers = $result->usercount ?? 0;
 
         // Get the role names used to calculate the average dedicated time for the course.
         $rolequery = "SELECT * FROM {role} WHERE id ".$roleidsql;

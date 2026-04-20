@@ -59,5 +59,18 @@ function xmldb_block_dedication_upgrade($oldversion, $block) {
         upgrade_block_savepoint(true, 2022122100, 'dedication');
     }
 
+    if ($oldversion < 2026041700) {
+        // Add composite index on block_dedication(courseid, timestart, userid) to optimise
+        // the dedication average queries which filter by courseid and timestart range.
+        // The existing index (userid, courseid) is wrong order for these queries.
+        $table = new xmldb_table('block_dedication');
+        $index = new xmldb_index('blocdedi_coutimuse_ix', XMLDB_INDEX_NOTUNIQUE, ['courseid', 'timestart', 'userid']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        upgrade_block_savepoint(true, 2026041700, 'dedication');
+    }
+
     return true;
 }
