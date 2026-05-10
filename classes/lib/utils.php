@@ -23,6 +23,9 @@
  */
 
 namespace block_dedication\lib;
+
+use local_ace\local\filter_manager;
+
 /**
  * Utils helper class.
  */
@@ -325,11 +328,11 @@ class utils {
             $params['since'] = time() - $duration;
         }
 
-        if (!empty($SESSION->local_ace_filtervalues) && $filter && file_exists($CFG->dirroot . '/local/ace/locallib.php')) {
+        if (filter_manager::has_active_filters() && $filter && file_exists($CFG->dirroot . '/local/ace/locallib.php')) {
 
             require_once($CFG->dirroot . '/local/ace/locallib.php');
 
-            list($joinsql, $wheresql, $filterparams) = local_ace_generate_filter_sql($SESSION->local_ace_filtervalues);
+            list($joinsql, $wheresql, $filterparams) = filter_manager::get_filter_sql();
 
             // Filter path needs {user} u for filter JOINs that reference u.id / u.idnumber.
             $sql = "SELECT SUM(bd.timespent) AS total, COUNT(DISTINCT bd.userid) AS usercount
