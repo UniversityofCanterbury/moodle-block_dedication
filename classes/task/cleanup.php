@@ -27,7 +27,6 @@ namespace block_dedication\task;
  * Scheduled task to delete logs with origin cli and restore.
  */
 class cleanup extends \core\task\scheduled_task {
-
     /**
      * Get a descriptive name for this task (shown to admins).     *
      * @return string
@@ -42,28 +41,31 @@ class cleanup extends \core\task\scheduled_task {
      */
     public function execute() {
         global $DB;
-        $loglifetime = (int)get_config('block_dedication', 'allloglifetime');
+        $loglifetime = (int) get_config('block_dedication', 'allloglifetime');
 
         if (empty($loglifetime) || $loglifetime < 0) {
             return;
         }
 
-        $loglifetime = time() - ($loglifetime * 3600 * 24); // Value in days.
-        $lifetimep = array($loglifetime);
+        // Convert the retention period (stored in seconds) to a cutoff timestamp.
+        $cutoff = time() - $loglifetime;
         $start = time();
 
-        while ($min = $DB->get_field_select("block_dedication", "MIN(timestart)",
-        "timestart < ?", $lifetimep)) {
-            $params = array(min($min + 3600 * 24, $loglifetime));
-            // Delete cli and restore logs.
-            $DB->delete_records_select("block_dedication", "timestart < ? ", $params);
-            if (time() > $start + 1200) {
-                // Do not churn on log deletion for too long each run.
+        // Delete in daily chunks to avoid long-running transactions.
+        while ($DB->record_exists_select('block_dedication', 'timestart < :cutoff', ['cutoff' => $cutoff])) {
+            $batchend = $cutoff;
+            $min = $DB->get_field_select('block_dedication', 'MIN(timestart)', 'timestart < ?', [$cutoff]);
+            if ($min !== false) {
+                $batchend = min($min + DAYSECS, $cutoff);
+            }
+            $DB->delete_records_select('block_dedication', 'timestart < :batchend', ['batchend' => $batchend]);
+
+            if (time() > $start + 300) {
+                mtrace('  Cleanup time limit reached, will continue next run.');
                 break;
             }
         }
 
-        mtrace(" Deleted old records from block_dedication table.");
+        mtrace('  Deleted old records from block_dedication table.');
     }
 }
-

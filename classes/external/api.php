@@ -15,23 +15,32 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Block editing form.
- * @package block_dedication
- * @copyright 2022 University of Canterbury
+ * Public API for the dedication block.
+ *
+ * @package    block_dedication
+ * @copyright  2026 University of Canterbury
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class block_dedication_edit_form extends block_edit_form {
+
+namespace block_dedication\external;
+
+use block_dedication\local\utils;
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Stable public interface for other plugins to consume dedication data.
+ */
+class api {
     /**
-     * Custom settings for block.
+     * Calculate averages and totals for timespent in course.
      *
-     * @param mform $mform
-     * @return void
+     * @param int $courseid Course ID.
+     * @param int|null $duration Duration window in seconds.
+     * @param bool $filter Whether to apply ACE filters.
+     * @return array Associative array with average, total, usercount, roles keys.
      */
-    protected function specific_definition($mform) {
-
-        $mform->addElement('header', 'configheader', get_string('blocksettings', 'block'));
-
-        $mform->addElement('selectyesno', 'config_show_dedication', get_string('showestimatedtime', 'block_dedication'));
-        $mform->addHelpButton('config_show_dedication', 'showestimatedtime', 'block_dedication');
+    public static function get_average(int $courseid, ?int $duration = null, bool $filter = false): array {
+        return utils::get_average($courseid, $duration, $filter);
     }
 }

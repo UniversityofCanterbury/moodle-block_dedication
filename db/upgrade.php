@@ -33,7 +33,6 @@ function xmldb_block_dedication_upgrade($oldversion, $block) {
     $dbman = $DB->get_manager();
 
     if ($oldversion < 2022122100) {
-
         // Define table block_dedication to be created.
         $table = new xmldb_table('block_dedication');
 

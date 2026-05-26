@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-use block_dedication\lib\utils;
+use block_dedication\local\utils;
 /**
  * Dedication block definition.
  *
@@ -25,7 +25,6 @@ use block_dedication\lib\utils;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class block_dedication extends block_base {
-
     /**
      * Initialise.
      *
@@ -35,7 +34,9 @@ class block_dedication extends block_base {
         $this->title = get_string('pluginname', 'block_dedication');
     }
 
-    /** Block level config. */
+    /**
+     * Block level config.
+     */
     public function specialization() {
         // Previous block versions didn't have config settings.
         if ($this->config === null) {
@@ -65,8 +66,11 @@ class block_dedication extends block_base {
 
         $lastruntime = get_config('block_dedication', 'lastcalculated');
         if (empty($lastruntime)) {
-            $this->content->text = html_writer::tag('p', get_string('timespenttasknotrunning', 'block_dedication'),
-                                                    ['class' => 'warning']);
+            $this->content->text = html_writer::tag(
+                'p',
+                get_string('timespenttasknotrunning', 'block_dedication'),
+                ['class' => 'warning']
+            );
             return $this->content;
         }
         $showtimespent = empty($this->config->show_dedication) ? false : true;
@@ -77,18 +81,25 @@ class block_dedication extends block_base {
 
             $lastupdated = get_config('block_dedication', 'lastcalculated');
             if (!empty($lastupdated)) {
-                $this->content->footer .= html_writer::span(get_string('lastupdated', 'block_dedication',
-                    userdate($lastupdated, get_string('strftimedatetimeshort', 'core_langconfig'))), 'dimmed_text');
+                $this->content->footer .= html_writer::span(get_string(
+                    'lastupdated',
+                    'block_dedication',
+                    userdate($lastupdated, get_string('strftimedatetimeshort', 'core_langconfig'))
+                ), 'dimmed_text');
             }
         }
         if (has_capability('block/dedication:viewreports', context_course::instance($COURSE->id))) {
             $url = new moodle_url('/blocks/dedication/index.php', ['id' => $COURSE->id]);
-            $this->content->footer .= html_writer::tag('p', html_writer::link($url,
-                                                       get_string('timespentreport', 'block_dedication')));
+            $this->content->footer .= html_writer::tag('p', html_writer::link(
+                $url,
+                get_string('timespentreport', 'block_dedication')
+            ));
         } else if ($showtimespent) {
             $url = new moodle_url('/blocks/dedication/user.php', ['id' => $COURSE->id, 'userid' => $USER->id]);
-            $this->content->footer .= html_writer::tag('p', html_writer::link($url,
-                                                       get_string('timespentreport', 'block_dedication')));
+            $this->content->footer .= html_writer::tag('p', html_writer::link(
+                $url,
+                get_string('timespentreport', 'block_dedication')
+            ));
         }
 
         return $this->content;
@@ -115,5 +126,4 @@ class block_dedication extends block_base {
     public function has_config(): bool {
         return true;
     }
-
 }

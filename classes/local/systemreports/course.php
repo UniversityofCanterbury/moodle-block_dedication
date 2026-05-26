@@ -33,7 +33,6 @@ use pix_icon;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class course extends system_report {
-
     /**
      * Initialise report, we need to set the main table, load our entities and set columns/filters
      */
@@ -132,16 +131,16 @@ class course extends system_report {
         $wheresql = "{$dedicationalias}.courseid = :$param1 AND {$contextalias}.contextlevel = 50 AND {$contextalias}.instanceid = :$param2";
         $params = [
                 $param1 => $courserecord->id,
-                $param2 => $courserecord->id
+                $param2 => $courserecord->id,
         ];
 
         // Get selected Role IDs from Dedication settings list
-        $dedicationrolespecify = get_config('block_dedication','rolespecify');
+        $dedicationrolespecify = get_config('block_dedication', 'rolespecify');
         // Convert String value to Integer to be used in Select query.
         $roleids = array_map('intval', explode(',', $dedicationrolespecify));
         $roleidsparam = database::generate_param_name();
 
-        list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED,$roleidsparam);
+        [$rolesql, $roleparams] = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, $roleidsparam);
 
         $wheresql .= " AND {$rolealias}.id {$rolesql}";
         $params = array_merge($params, $roleparams);
@@ -155,7 +154,8 @@ class course extends system_report {
         // Action to download individual task log.
         $this->add_action((new action(
             new moodle_url('/blocks/dedication/user.php', ['id' => $courserecord->id, 'userid' => ":userid"]),
-            new pix_icon('i/search', get_string('viewsessiondurationreport', 'block_dedication')))));
+            new pix_icon('i/search', get_string('viewsessiondurationreport', 'block_dedication'))
+        )));
 
         if (has_capability('report/log:view', \context_course::instance($courserecord->id))) {
             $this->add_action((new action(

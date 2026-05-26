@@ -35,7 +35,6 @@ use core_reportbuilder\local\filters\select as core_select;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class select extends core_select {
-
     /**
      * Return filter SQL
      *
