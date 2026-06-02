@@ -57,7 +57,7 @@ if (!empty($lastupdated)) {
     echo html_writer::span(get_string(
         'lastupdated',
         'block_dedication',
-        userdate($lastupdated, get_string('strftimedatetimeshort', 'core_langconfig'))
+        userdate($lastupdated, '%a, %d %b %y: %I:%M%p')
     ), 'dimmed_text');
 }
 $usercontext = context_user::instance($user->id);

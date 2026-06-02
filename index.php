@@ -96,7 +96,7 @@ if (!empty($config->lastcalculated)) {
         get_string(
             'lastupdated',
             'block_dedication',
-            userdate($config->lastcalculated, get_string('strftimedatetimeshort', 'core_langconfig'))
+            userdate($config->lastcalculated, '%a, %d %b %y: %I:%M%p')
         ),
         ['id' => 'last-updated', 'class' => 'd-block dimmed_text']
     );
