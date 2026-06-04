@@ -30,20 +30,20 @@ $capabilities = [
         'contextlevel' => CONTEXT_BLOCK,
         'archetypes' => ['editingteacher' => CAP_ALLOW,
                          'manager' => CAP_ALLOW],
-        'clonepermissionsfrom' => 'moodle/site:manageblocks'
+        'clonepermissionsfrom' => 'moodle/site:manageblocks',
     ],
     'block/dedication:myaddinstance' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_BLOCK,
         'archetypes' => ['editingteacher' => CAP_ALLOW,
                          'manager' => CAP_ALLOW],
-        'clonepermissionsfrom' => 'moodle/site:manageblocks'
+        'clonepermissionsfrom' => 'moodle/site:manageblocks',
     ],
     'block/dedication:viewreports' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => ['teacher' => CAP_ALLOW,
                          'editingteacher' => CAP_ALLOW,
-                         'manager' => CAP_ALLOW]
+                         'manager' => CAP_ALLOW],
     ],
 ];

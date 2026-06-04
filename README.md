@@ -1,79 +1,94 @@
-# Introduction
+# Dedication Block
 
-This block allows to see the dedication estimated time to a Moodle course by the participants of the course.
-https://moodle.org/plugins/block_dedication
+Estimates and reports time spent by participants in a Moodle course, based on
+log-entry session analysis.
 
-# MOODLE 4.X updates
-Maintenance for this plugin has been taken over by Catalyst IT thanks to funding from the University of Canterbury.
+## Fork Information
 
-NOTE: This new version of the block differs from the original version in some significant ways:
-1. To unify global reporting across all courses, you can no longer set the minimum session limit within the block and can only set this in the site-level settings - this fixes various inconsistency issues previously reported and makes it clearer what the setting actually does. The site-level session limit is also exposed to teachers in the reporting pages via the text "Excludes sessions less than X".
-2. Timespent information is now generated via a scheduled task - this improves general performance but also enables the data to be exposed within Moodle's new Report Builder custom reporting.
-3. The main course report uses Moodle's reportbuilder api, however this unfortunately drops the ability to filter the report based on the date as system level reportbuilder reports do not support aggregate values well (see MDL-76392) - You can still create a custom report within report-buidlers custom reports to do this and make it available for teachers to use.
-4. Changing the site level settings (session_limit etc) does not recalculate existing records, this will be addressed in a future release - see issue #59.
-5. The first time this new version is installed, only the last 12 weeks of sessions usage is calculated - if you want to calculate further historical data see the CLI script in the CLI folder (requires server-level access to execute.).
-6. Users (students) can now see a link to a report that shows them a list of all ther sessions and estimated durations.
-7. Custom reportbuilder source is available for site-level reporting (under admin > reports > reportbuilder > custom reports).
-8. Course and user-level reporting now uses the reportbuilder api available in Moodle 4.0.
+This is a fork of the [Catalyst IT dedication block](https://github.com/catalyst/moodle-block_dedication),
+maintained by the University of Canterbury.
 
-# Branches
+### Why we forked
 
-| Moodle version    | Branch             |
-| ----------------- | ------------------ |
-| Moodle 4.0 - 4.3  | `MOODLE_400_STABLE` | 
-| Moodle 4.4        | `MOODLE_404_STABLE` |
+The upstream plugin includes **all enrolled users** (staff, coordinators, admins)
+in dedication calculations. Our use case requires filtering by configurable roles
+so that only student activity is measured. The upstream maintainers have not
+adopted this feature.
 
-# How dedication time is estimated?
-Time is estimated based in the concepts of Session and Session duration applied
-to Moodle's log entries:
+### Key differences from upstream
 
-  Click:
-  every time that a user access to a page in Moodle a log entry is stored.
+1. **Configurable role filtering** - site administrators can select which roles
+   are included in dedication calculations via the `rolespecify` multi-select
+   setting. Upstream includes all enrolled users indiscriminately.
+2. **Performance optimizations** - composite database index on
+   `(courseid, timestart, userid)` and optimised SQL queries for session
+   aggregation.
+3. **ACE integration** - optional hook into the local_ace filter system for
+   cohort-filtered dedication averages.
+4. **Cleanup task fix** - upstream issue #115 (infinite loop in the cleanup
+   scheduled task) is fixed in this fork.
+5. **ReportBuilder system reports** - course and user-level reports use Moodle's
+   `core_reportbuilder` API.
 
-  Session:
-  set of two or more consecutive clicks in which the elapsed time between every
-  pair of consecutive clicks does not overcome an established maximum time.
+### Upstream issues addressed
 
-  Session duration:
-  elapsed time between the first and the last click of the session.
+| Issue | Description | Status in this fork |
+|-------|-------------|---------------------|
+| #115  | Cleanup task infinite loop due to inverted `min()` logic | Fixed |
+| #116  | Memory exhaustion on large courses | Partially mitigated via weekly chunking in `generate_stats()` |
+| #126  | Session fixation security concern | Not applicable - plugin uses log-based session detection, not PHP sessions |
 
-# Features
+## How dedication time is estimated
 
-This block is intended to be used only by teachers, so students aren't going to
-see it and their dedication time. However, block can be configured to show
-dedication time to students too.
+Time is estimated using session analysis applied to Moodle's log entries:
 
-Teachers can use a tool to analyze dedication time within a course. The tool
-provides three views:
+- **Click**: each page access generates a log entry.
+- **Session**: consecutive clicks where the gap between each pair does not exceed
+  the configured session limit (default: 1 hour).
+- **Session duration**: elapsed time between the first and last click of a session.
+- **Dedication time**: the sum of all session durations for a user in a course.
 
-  Dedication time of the course:
-  calculates total dedication time, mean dedication time and connections per day
-  for each student.
+Sessions shorter than the configured minimum (default: 1 minute) are excluded.
 
-  Dedication time of a group:
-  the same but only for choosed group members.
+## Features
 
-  Dedication of a student:
-  detalied sessions for a student with start date & time, duration and ip.
+- Students can view their own estimated time spent in the block.
+- Teachers can access a course-level report showing dedication for all students.
+- Per-student session detail reports with start time and duration.
+- Reports are downloadable in spreadsheet format.
+- Data is generated via a scheduled task for performance.
+- Custom ReportBuilder datasource available for site-level reporting.
 
-The tools provide an option to download all data in spreadsheet format. The use
-of this tool is restricted by a capability to teachers and admins only.
+## Requirements
 
-This block cannot be used in the site page, only in courses pages.
+- Moodle 4.4 or 4.5
+- `logstore_standard` or `logstore_standardqueued` log store
 
-All texts in English and Spanish.
+## Branches
 
-# Support
-Please use the moodle coummunity forums for help with this plugin:
-https://moodle.org/mod/forum/view.php?id=44
+| Moodle version    | Branch              |
+|-------------------|---------------------|
+| Moodle 4.0 - 4.3  | `MOODLE_400_STABLE` |
+| Moodle 4.4 - 4.5  | `MOODLE_404_STABLE` |
 
-Alternatively commercial-level support is available from Catalyst IT:
-https://www.catalyst.net.nz/
+## Credits
 
-# Credits
-Moodle 4.0 release developed with funding thanks to Canterbury University
+Originally developed by Aday Talavera (CICEI, Universidad de Las Palmas de Gran Canaria). First version for Moodle 1.9 by Borja Rubio Reyes.
 
-![UC-Logo-3-2_3654775638524282877 (1)](https://user-images.githubusercontent.com/362798/202991887-815a122e-5b1b-49f0-8546-0fed94239753.jpg)
+<img src="pix/ulpgc-logo.svg" alt="Universidad de Las Palmas de Gran Canaria" height="100">
 
+Moodle 4.0+ release developed by Catalyst IT with funding from the University of Canterbury.
 
-This block was previously developed and produced by Aday Talavera, CICEI at Las Palmas de Gran Canaria University and the first version for Moodle 1.9 was developed by Borja Rubio Reyes.
+<img src="pix/catalyst-logo.png" alt="Catalyst IT" height="60">
+
+Ongoing development and maintenance by the University of Canterbury as part of the ACE (Analytics for Course Engagement) suite.
+
+<img src="pix/uc-logo.jpg" alt="University of Canterbury" height="100">
+
+## License
+
+2022 University of Canterbury
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+See <https://www.gnu.org/copyleft/gpl.html> for details.

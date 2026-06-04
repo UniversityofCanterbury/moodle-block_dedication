@@ -22,21 +22,17 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_dedication\lib;
-
-use local_ace\local\filter_manager;
-
+namespace block_dedication\local;
 /**
  * Utils helper class.
  */
 class utils {
-
     /**
      * List of supported logstore plugins.
      *
      * @var array
      */
-    public static $logstores = array('logstore_standard', 'logstore_standardqueued');
+    public static $logstores = ['logstore_standard', 'logstore_standardqueued'];
 
     /**
      * Return formatted events from logstores.
@@ -45,7 +41,7 @@ class utils {
      * @return array
      */
     public static function get_events_select($selectwhere, array $params) {
-        $return = array();
+        $return = [];
 
         static $allreaders = null;
 
@@ -74,8 +70,8 @@ class utils {
 
         // Sort mixed array by time ascending again only when more of a reader has added events to return array.
         if ($processedreaders > 1) {
-            usort($return, function($a, $b) {
-                return $a->time > $b->time;
+            usort($return, function ($a, $b) {
+                return $a->time <=> $b->time;
             });
         }
 
@@ -93,51 +89,22 @@ class utils {
         }
         $totalsecs = abs($totalsecs);
 
-        $str = new \stdClass();
-        $str->hour = get_string('hour');
-        $str->hours = get_string('hours');
-        $str->min = get_string('min');
-        $str->mins = get_string('mins');
-        $str->sec = get_string('sec');
-        $str->secs = get_string('secs');
-
         $hours = floor($totalsecs / HOURSECS);
-        $remainder = $totalsecs - ($hours * HOURSECS);
-        $mins = floor($remainder / MINSECS);
-        $secs = round($remainder - ($mins * MINSECS), 2);
+        $mins = floor(($totalsecs - ($hours * HOURSECS)) / MINSECS);
 
-        $ss = ($secs == 1) ? $str->sec : $str->secs;
-        $sm = ($mins == 1) ? $str->min : $str->mins;
-        $sh = ($hours == 1) ? $str->hour : $str->hours;
+        $sh = ($hours == 1) ? get_string('hour') : get_string('hours');
+        $sm = ($mins == 1) ? get_string('min') : get_string('mins');
 
-        $ohours = '';
-        $omins = '';
-        $osecs = '';
-
+        if ($hours && $mins) {
+            return $hours . ' ' . $sh . ' ' . $mins . ' ' . $sm;
+        }
         if ($hours) {
-            $ohours = $hours . ' ' . $sh;
+            return $hours . ' ' . $sh;
         }
         if ($mins) {
-            $omins = $mins . ' ' . $sm;
+            return $mins . ' ' . $sm;
         }
-        if ($secs) {
-            $osecs = $secs . ' ' . $ss;
-        }
-
-        if ($hours) {
-            return trim($ohours . ' ' . $omins);
-        }
-        if ($mins) {
-            if ($mins < 15) { // If less than 15min, show seconds value as well as minutes.
-                return trim($omins . ' ' . $osecs);
-            } else { // If over 15min, just display a minute value.
-                return trim($omins);
-            }
-        }
-        if ($secs) {
-            return $osecs;
-        }
-        return get_string('none');
+        return get_string('lessthanaminute', 'block_dedication');
     }
 
     /**
@@ -149,17 +116,17 @@ class utils {
 
         // Twitter Bootstrap styling.
         $isbootstrap = ($PAGE->theme->name === 'boost') ||
-                        count(array_intersect(array('boost', 'bootstrapbase'), $PAGE->theme->parents)) > 0;
+                        count(array_intersect(['boost', 'bootstrapbase'], $PAGE->theme->parents)) > 0;
         if ($isbootstrap) {
-            $styles = array(
+            $styles = [
                 'table_class' => 'table table-bordered table-hover table-sm table-condensed table-dedication',
-                'header_style' => 'background-color: #333; color: #fff;'
-            );
+                'header_style' => 'background-color: #333; color: #fff;',
+            ];
         } else {
-            $styles = array(
+            $styles = [
                 'table_class' => 'table-dedication',
-                'header_style' => ''
-            );
+                'header_style' => '',
+            ];
         }
 
         return $styles;
@@ -212,7 +179,6 @@ class utils {
         } else {
             self::calculate($timestart, $timeend);
         }
-
     }
 
     /**
@@ -224,10 +190,10 @@ class utils {
      */
     public static function calculate($timestart, $timeend) {
         global $DB;
-        mtrace("calculating stats from: " . userdate($timestart) . " to:". userdate($timeend));
+        mtrace("calculating stats from: " . userdate($timestart) . " to:" . userdate($timeend));
         // TODO: accessing logs data uses the log store reader classes - we should look at converting this to do something similar.
         // Get list of courses and users we want to calculate for.
-        $sql = "SELECT distinct ". $DB->sql_concat_join("':'", ['courseid', 'userid'])." as tmpid, courseid, userid
+        $sql = "SELECT distinct " . $DB->sql_concat_join("':'", ['courseid', 'userid']) . " as tmpid, courseid, userid
                   FROM {logstore_standard_log}
                  WHERE timecreated >= :timestart AND timecreated < :timeend AND userid > 0 AND courseid > 0";
         $records = $DB->get_recordset_sql($sql, ['timestart' => $timestart, 'timeend' => $timeend]);
@@ -252,14 +218,13 @@ class utils {
                 $events = $logs->get_user_dedication($user);
                 foreach ($events as $event) {
                     $data = new \stdClass();
-                    if ($event->dedicationtime == 0) {
+                    if (empty($event->dedicationtime)) {
                         continue;
-                    } else {
-                        $data->userid = $user;
-                        $data->timespent = $event->dedicationtime;
-                        $data->courseid = $course->id;
-                        $data->timestart = $event->start_date;
                     }
+                    $data->userid = $user;
+                    $data->timespent = $event->dedicationtime;
+                    $data->courseid = $course->id;
+                    $data->timestart = $event->start_date;
                     $records[] = $data;
                 }
             }
@@ -282,10 +247,10 @@ class utils {
      * @param boolean $rawformat
      * @return void
      */
-    public static function timespent($courseid, $userid, $rawformat=false) {
+    public static function timespent($courseid, $userid, $rawformat = false) {
         global $DB;
         $totaldedication = $DB->get_field_sql(
-        "SELECT SUM(timespent) FROM {block_dedication} WHERE courseid = ? AND userid = ?",
+            "SELECT SUM(timespent) FROM {block_dedication} WHERE courseid = :courseid AND userid = :userid",
             ['courseid' => $courseid, 'userid' => $userid]
         );
         if ($rawformat) {
@@ -303,14 +268,14 @@ class utils {
      * @param bool $filter
      * @return array
      */
-    public static function get_average($courseid, $duration = null, bool $filter = false):array {
+    public static function get_average($courseid, $duration = null, bool $filter = false): array {
         // Access global Moodle core variables.
         global $DB, $CFG, $SESSION;
         // Get selected Role IDs from Dedication settings list
-        $dedicationrolespecify = get_config('block_dedication','rolespecify');
+        $dedicationrolespecify = get_config('block_dedication', 'rolespecify');
         // Convert String value to Integer to be used in Select query.
         $roleids = array_map('intval', explode(',', $dedicationrolespecify));
-        list($roleidsql, $params_roleids) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED);
+        [$roleidsql, $paramsroleids] = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED);
 
         // Look up the course context ID once — avoids joining {course} and {context} tables.
         $contextid = \context_course::instance($courseid)->id;
@@ -320,7 +285,7 @@ class utils {
             'contextid' => $contextid,
         ];
 
-        $params = array_merge($params, $params_roleids);
+        $params = array_merge($params, $paramsroleids);
 
         $sqlextra = '';
         if (!empty($duration)) {
@@ -328,11 +293,11 @@ class utils {
             $params['since'] = time() - $duration;
         }
 
-        if (filter_manager::has_active_filters() && $filter && file_exists($CFG->dirroot . '/local/ace/locallib.php')) {
-
-            require_once($CFG->dirroot . '/local/ace/locallib.php');
-
-            list($joinsql, $wheresql, $filterparams) = filter_manager::get_filter_sql();
+        $acefilteravailable = $filter
+            && class_exists('local_ace\external\filter_api')
+            && \local_ace\external\filter_api::has_active_filters($courseid);
+        if ($acefilteravailable) {
+            [$joinsql, $wheresql, $filterparams] = \local_ace\external\filter_api::get_filter_sql('studentattributes', $courseid);
 
             // Filter path needs {user} u for filter JOINs that reference u.id / u.idnumber.
             $sql = "SELECT SUM(bd.timespent) AS total, COUNT(DISTINCT bd.userid) AS usercount
@@ -344,9 +309,7 @@ class utils {
                 AND ra.roleid " . $roleidsql . " " . implode(" ", $wheresql);
 
             $params = array_merge($params, $filterparams);
-
         } else {
-
             // Unfiltered path — no need for {user}, {course}, or {context} table JOINs.
             // block_dedication already has courseid, and we looked up contextid above.
             $sql = "SELECT SUM(bd.timespent) AS total, COUNT(DISTINCT bd.userid) AS usercount
@@ -354,7 +317,6 @@ class utils {
                 JOIN {role_assignments} ra ON ra.contextid = :contextid AND ra.userid = bd.userid
                 WHERE bd.courseid = :courseid" . $sqlextra . "
                 AND ra.roleid " . $roleidsql;
-
         }
 
         $result = $DB->get_record_sql($sql, $params);
@@ -362,8 +324,8 @@ class utils {
         $totalusers = $result->usercount ?? 0;
 
         // Get the role names used to calculate the average dedicated time for the course.
-        $rolequery = "SELECT * FROM {role} WHERE id ".$roleidsql;
-        $rolerecords = $DB->get_records_sql($rolequery, $params_roleids);
+        $rolequery = "SELECT * FROM {role} WHERE id " . $roleidsql;
+        $rolerecords = $DB->get_records_sql($rolequery, $paramsroleids);
         // Create empty variable to house role names
         $roles = '';
         // Get a count of roles, used to help format text returned.
@@ -375,14 +337,14 @@ class utils {
             if ($rolekey !== $lastrole) {
                 // If not the last key in the array, append string to role name for nice formatting.
                 $roles .= $roledata->name . ', ';
-            }else{
+            } else {
                 // If the last/only key in array, ensure not trail empty space and comma present.
                 $roles = rtrim(trim($roles), ',');
                 // Confirm array count
-                if($rolescount > 1){
+                if ($rolescount > 1) {
                     // If array is larger than 1 key, close $roles string correctly.
-                    $roles .= ' and '.$roledata->name;
-                }else {
+                    $roles .= ' and ' . $roledata->name;
+                } else {
                     // Expecting only one key array, simply list the role for better reading.
                     $roles .= $roledata->name;
                 }

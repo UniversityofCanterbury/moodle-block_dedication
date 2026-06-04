@@ -32,11 +32,7 @@ use core_privacy\local\request\{approved_contextlist, approved_userlist, context
  * Class provider
  * @package block_dedication
  */
-class provider implements
-    \core_privacy\local\metadata\provider,
-    \core_privacy\local\request\plugin\provider,
-    \core_privacy\local\request\core_userlist_provider {
-
+class provider implements \core_privacy\local\metadata\provider, \core_privacy\local\request\core_userlist_provider, \core_privacy\local\request\plugin\provider {
     /**
      * Returns metadata.
      *
@@ -80,7 +76,7 @@ class provider implements
     public static function delete_data_for_users(approved_userlist $userlist) {
         global $DB;
         $userids = $userlist->get_userids();
-        list($insql, $inparams) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
+        [$insql, $inparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
         $DB->delete_records_select('block_dedication', "userid $insql", $inparams);
     }
 
@@ -94,7 +90,7 @@ class provider implements
      * @return contextlist $contextlist The contextlist containing the list of contexts used in this plugin.
      */
     public static function get_contexts_for_userid(int $userid): contextlist {
-        return (new contextlist)->add_from_sql(
+        return (new contextlist())->add_from_sql(
             "SELECT cx.id
             FROM {block_dedication} bd
             JOIN {context} cx ON cx.contextlevel = :blocklevel AND cx.instanceid = bd.id
@@ -145,7 +141,7 @@ class provider implements
         $data = [];
 
         $userid = (int) $contextlist->get_user()->id;
-        $results = $DB->get_records('block_dedication', array('userid' => $userid));
+        $results = $DB->get_records('block_dedication', ['userid' => $userid]);
         foreach ($results as $result) {
             $data[] = (object) [
                 'courseid' => $result->courseid,
@@ -158,7 +154,7 @@ class provider implements
                 'block_dedication' => $data,
             ];
             \core_privacy\local\request\writer::with_context($contextlist->current())->export_data(
-                [get_string('pluginname', 'local_ace')],
+                [get_string('pluginname', 'block_dedication')],
                 $data
             );
         }

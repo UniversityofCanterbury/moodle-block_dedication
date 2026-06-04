@@ -23,13 +23,12 @@
  */
 namespace block_dedication\task;
 
-use block_dedication\lib\utils;
+use block_dedication\local\utils;
 
 /**
  * Dedication data generator task.
  */
 class dedication_collector extends \core\task\scheduled_task {
-
     /**
      * Return the task's name as shown in admin screens.
      *

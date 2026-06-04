@@ -31,7 +31,6 @@ use lang_string;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class groups extends base {
-
     /**
      * Database tables that this entity uses
      *
@@ -107,7 +106,7 @@ class groups extends base {
             "$groupsalias.groupids"
         ))
             ->add_joins($this->get_joins())
-            ->set_options_callback(static function(): array {
+            ->set_options_callback(static function (): array {
                 global $PAGE, $USER;
                 if ($PAGE->course->groupmode == VISIBLEGROUPS || has_capability('moodle/site:accessallgroups', $PAGE->context)) {
                     $groups = groups_get_all_groups($PAGE->course->id, 0, $PAGE->course->defaultgroupingid);

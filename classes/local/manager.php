@@ -22,15 +22,14 @@
  * @author Pramith Dayananda <pramithd@catalyst.net.nz>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-namespace block_dedication\lib;
+namespace block_dedication\local;
 
-use block_dedication\lib\utils;
+use block_dedication\local\utils;
 
 /**
  * Generate dedication reports based in passed params.
  */
 class manager {
-
     /** @var stdclass Course */
     protected $course;
     /** @var int $mintime - unix timestamp. */
@@ -73,13 +72,13 @@ class manager {
         }
         $where = 'courseid = :courseid AND userid = :userid AND timecreated >= :mintime AND timecreated <= :maxtime ' .
             'AND origin != :origin';
-        $params = array(
+        $params = [
             'courseid' => $this->course->id,
             'userid' => $userid,
             'mintime' => $this->mintime,
             'maxtime' => $this->maxtime,
             'origin' => 'cli',
-        );
+        ];
         $logs = utils::get_events_select($where, $params);
 
         if ($simple) {
@@ -104,16 +103,15 @@ class manager {
             }
 
             return $total;
-
         } else {
             // Return user sessions with details.
-            $rows = array();
+            $rows = [];
 
             if ($logs) {
                 $previouslog = array_shift($logs);
                 $previouslogtime = $previouslog->time;
                 $sessionstart = $previouslogtime;
-                $ips = array($previouslog->ip => true);
+                $ips = [$previouslog->ip => true];
 
                 foreach ($logs as $log) {
                     if (($log->time - $previouslogtime) > $this->limit) {
@@ -121,8 +119,8 @@ class manager {
 
                         // Ignore sessions with a really short duration.
                         if ($dedication > $config->ignore_sessions_limit) {
-                            $rows[] = (object) array('start_date' => $sessionstart, 'dedicationtime' => $dedication);
-                            $ips = array();
+                            $rows[] = (object) ['start_date' => $sessionstart, 'dedicationtime' => $dedication];
+                            $ips = [];
                         }
                         $sessionstart = $log->time;
                     }
@@ -134,7 +132,7 @@ class manager {
 
                 // Ignore sessions with a really short duration.
                 if ($dedication > $config->ignore_sessions_limit) {
-                    $rows[] = (object) array('start_date' => $sessionstart, 'dedicationtime' => $dedication);
+                    $rows[] = (object) ['start_date' => $sessionstart, 'dedicationtime' => $dedication];
                 }
             }
 

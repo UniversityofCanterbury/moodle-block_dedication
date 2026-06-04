@@ -28,7 +28,6 @@ use core_reportbuilder\system_report;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class userreport extends system_report {
-
     /**
      * Initialise report, we need to set the main table, load our entities and set columns/filters
      */
@@ -40,7 +39,7 @@ class userreport extends system_report {
         $PAGE->set_context($this->get_context());
 
         $userid = $this->get_parameter('userid', $USER->id, PARAM_INT);
-        if ($userid <> $USER->id) {
+        if ($userid !== (int) $USER->id) {
             require_capability('block/dedication:viewreports', $this->get_context());
         }
 
@@ -56,8 +55,10 @@ class userreport extends system_report {
 
         $wheresql = "$entitymainalias.courseid = :$param1 AND $entitymainalias.userid = :$param2";
 
-        $this->add_base_condition_sql($wheresql,
-            [$param1 => $course->id, $param2 => $userid]);
+        $this->add_base_condition_sql(
+            $wheresql,
+            [$param1 => $course->id, $param2 => $userid]
+        );
 
         // Now we can call our helper methods to add the content we want to include in the report.
         $this->add_columns();
@@ -76,7 +77,7 @@ class userreport extends system_report {
     protected function can_view(): bool {
         global $USER;
         $userid = optional_param('userid', $USER->id, PARAM_INT);
-        if ($userid == $USER->id) {
+        if ($userid === (int) $USER->id) {
             return true;
         }
         // Not viewing own report, check if can view others.

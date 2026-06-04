@@ -29,15 +29,10 @@ defined('MOODLE_INTERNAL') || die();
 use html_writer;
 use moodleform;
 
-global $CFG, $DB;
-require_once($CFG->libdir . '/formslib.php');
-
-// Form to select start and end date ranges and session time.
 /**
  * Admin filter form.
  */
 class admin_filter extends moodleform {
-
     /**
      * Form definition.
      */
@@ -45,7 +40,7 @@ class admin_filter extends moodleform {
 
         $mform = & $this->_form;
 
-        $courseoptions = array();
+        $courseoptions = [];
         $courses = get_courses();
         foreach ($courses as $course) {
             if ($course->id != 1) {
@@ -69,5 +64,4 @@ class admin_filter extends moodleform {
         // Buttons.
         $this->add_action_buttons(false, get_string('admin_filter_submit', 'block_dedication'));
     }
-
 }
