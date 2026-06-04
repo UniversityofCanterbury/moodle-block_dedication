@@ -47,8 +47,12 @@ $PAGE->add_body_class('limitedwidth');
 $PAGE->set_title("$course->fullname: " . get_string('sessionduration', 'block_dedication'));
 $PAGE->set_heading($course->fullname);
 
+// Fetch the current groupid.
+$groups = groups_get_user_groups($courseid);
+$groups = array_pop($groups);
+
 echo $OUTPUT->header();
-$average = \block_dedication\local\utils::get_average($course->id);
+$average = \block_dedication\local\utils::get_average($course->id, null, false, $groups);
 
 echo html_writer::start_div('course_dedication_information');
 echo $OUTPUT->heading(get_string('timespentincourse', 'block_dedication'));

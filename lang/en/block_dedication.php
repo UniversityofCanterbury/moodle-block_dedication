@@ -99,6 +99,8 @@ $string['report_dedication'] = 'Tool Dedication Report';
 $string['report_timespent'] = 'Report Timespent';
 $string['user_dedication_datasource'] = 'User dedication';
 
+$string['groups'] = '<strong>Group(s):</strong> {$a}';
+
 // Settings.
 $string['allloglifetime'] = 'Keep session history for';
 $string['configallloglifetime'] = 'This specifies the length of time you want to keep data about session duration. Sessions that are older than this age are automatically deleted.';

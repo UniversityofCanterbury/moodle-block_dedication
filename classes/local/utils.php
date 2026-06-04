@@ -266,10 +266,10 @@ class utils {
      * @param int $courseid
      * @param int $duration
      * @param bool $filter
+     * @param array $groups
      * @return array
      */
-    public static function get_average($courseid, $duration = null, bool $filter = false): array {
-        // Access global Moodle core variables.
+    public static function get_average($courseid, $duration = null, bool $filter = false, array $groups = []): array {
         global $DB, $CFG, $SESSION;
         // Get selected Role IDs from Dedication settings list
         $dedicationrolespecify = get_config('block_dedication', 'rolespecify');
@@ -311,12 +311,22 @@ class utils {
             $params = array_merge($params, $filterparams);
         } else {
             // Unfiltered path — no need for {user}, {course}, or {context} table JOINs.
-            // block_dedication already has courseid, and we looked up contextid above.
             $sql = "SELECT SUM(bd.timespent) AS total, COUNT(DISTINCT bd.userid) AS usercount
                 FROM {block_dedication} bd
                 JOIN {role_assignments} ra ON ra.contextid = :contextid AND ra.userid = bd.userid
                 WHERE bd.courseid = :courseid" . $sqlextra . "
                 AND ra.roleid " . $roleidsql;
+
+            if (!empty($groups)) {
+                [$sqlgroups, $paramsmembers] = $DB->get_in_or_equal($groups, SQL_PARAMS_NAMED);
+                $sqlmembers = "SELECT id, userid FROM {groups_members} WHERE groupid {$sqlgroups}";
+                $userids = $DB->get_records_sql_menu($sqlmembers, $paramsmembers);
+                $userids = array_values($userids);
+
+                [$sqlmembers, $paramsmembers] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
+                $sql .= " AND bd.userid {$sqlmembers}";
+                $params = array_merge($params, $paramsmembers);
+            }
         }
 
         $result = $DB->get_record_sql($sql, $params);
