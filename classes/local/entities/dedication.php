@@ -24,7 +24,7 @@ use core_reportbuilder\local\filters\date;
 use core_reportbuilder\local\helpers\format;
 use core_reportbuilder\local\report\column;
 use core_reportbuilder\local\report\filter;
-use block_dedication\lib\utils;
+use block_dedication\local\utils;
 use core_reportbuilder\local\filters\duration;
 
 /**
@@ -35,7 +35,6 @@ use core_reportbuilder\local\filters\duration;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class dedication extends base {
-
     /**
      * Database tables that this entity uses
      *
@@ -97,7 +96,7 @@ class dedication extends base {
             ->add_fields("$dedicationalias.timespent")
             ->set_type(column::TYPE_INTEGER)
             ->set_is_sortable(true)
-            ->add_callback(static function(?int $value) {
+            ->add_callback(static function (?int $value) {
                 $format = utils::format_dedication($value);
                 return $format;
             });
@@ -147,5 +146,4 @@ class dedication extends base {
 
         return $filters;
     }
-
 }

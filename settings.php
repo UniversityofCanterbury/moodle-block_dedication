@@ -26,21 +26,43 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
-    $settings->add(new admin_setting_configduration('block_dedication/ignore_sessions_limit',
+    $settings->add(new admin_setting_configduration(
+        'block_dedication/ignore_sessions_limit',
         new lang_string('ignore_sessions_limit', 'block_dedication'),
-        new lang_string('ignore_sessions_limit_desc', 'block_dedication') ,
-        1 * MINSECS, PARAM_INT)
-    );
+        new lang_string('ignore_sessions_limit_desc', 'block_dedication'),
+        1 * MINSECS,
+        PARAM_INT
+    ));
 
-    $settings->add(new admin_setting_configduration('block_dedication/session_limit',
+    $settings->add(new admin_setting_configduration(
+        'block_dedication/session_limit',
         new lang_string('session_limit', 'block_dedication'),
         new lang_string('session_limit_desc', 'block_dedication'),
-        HOURSECS, PARAM_INT)
-    );
+        HOURSECS,
+        PARAM_INT
+    ));
 
     $settings->add(new admin_setting_configduration(
         'block_dedication/allloglifetime',
         new lang_string('allloglifetime', 'block_dedication'),
-        new lang_string('configallloglifetime', 'block_dedication'), YEARSECS, PARAM_INT));
+        new lang_string('configallloglifetime', 'block_dedication'),
+        YEARSECS,
+        PARAM_INT
+    ));
 
+    $allroles = role_get_names(\context_system::instance());
+    $roles = [];
+    $defaultselection = [];
+    foreach ($allroles as $role) {
+        $roles[$role->id] = $role->localname;
+        $defaultselection[] = $role->id;
+    }
+
+    $settings->add(new admin_setting_configmultiselect(
+        'block_dedication/rolespecify',
+        get_string('rolespecify', 'block_dedication'),
+        get_string('rolespecifydescription', 'block_dedication'),
+        $defaultselection,
+        $roles
+    ));
 }

@@ -24,11 +24,11 @@
 
 define('CLI_SCRIPT', true);
 
-use block_dedication\lib\utils;
+use block_dedication\local\utils;
 
 require('../../../config.php');
-require_once($CFG->libdir.'/clilib.php');
-require_once($CFG->libdir.'/adminlib.php');
+require_once($CFG->libdir . '/clilib.php');
+require_once($CFG->libdir . '/adminlib.php');
 
 $help =
     "Recalculate session durations.
@@ -43,16 +43,16 @@ Example:
 \$ sudo -u www-data /usr/bin/php blocks/dedication/cli/recalculate.php --start=1637478193 --end=1653116593
 ";
 
-list($options, $unrecognized) = cli_get_params(
-    array(
+[$options, $unrecognized] = cli_get_params(
+    [
         'start'  => null,
         'end' => null,
         'truncate' => false,
         'help'    => false,
-    ),
-    array(
+    ],
+    [
         'h' => 'help',
-    )
+    ]
 );
 
 if ($options['help'] || $options['start'] === null || $options['end'] === null) {
@@ -76,7 +76,7 @@ if ($options['truncate']) {
 // Sanity check to make sure data doesn't exist between the values.
 $sqlwhere = "timestart > ? AND timestart < ?";
 if ($DB->record_exists_select('block_dedication', $sqlwhere, [$start, $end])) {
-    echo "Data already exists within the timeframe specified, you cannot import this as it may generate duplicate data ".
+    echo "Data already exists within the timeframe specified, you cannot import this as it may generate duplicate data " .
          "- try with truncate if you want to delete existing data";
     cli_heading(get_string('error'));
     exit(1);

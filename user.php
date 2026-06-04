@@ -25,11 +25,11 @@
 
 require('../../config.php');
 require_once("{$CFG->libdir}/adminlib.php");
-require_once($CFG->dirroot.'/grade/lib.php');
+require_once($CFG->dirroot . '/grade/lib.php');
 
 use core_reportbuilder\system_report_factory;
 use block_dedication\local\systemreports\userreport;
-use block_dedication\lib\utils;
+use block_dedication\local\utils;
 
 $courseid = required_param('id', PARAM_INT);
 $userid = required_param('userid', PARAM_INT);
@@ -37,7 +37,7 @@ $userid = required_param('userid', PARAM_INT);
 $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 require_login($course);
 $context = context_course::instance($course->id);
-if ($userid <> $USER->id) {
+if ($userid !== (int) $USER->id) {
     require_capability('block/dedication:viewreports', $context);
 }
 
@@ -46,7 +46,7 @@ $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
 $PAGE->set_url('/block/dedication/user.php', ['id' => $courseid, 'userid' => $userid]);
 $PAGE->set_pagelayout('report');
 $PAGE->add_body_class('limitedwidth');
-$PAGE->set_title("$course->fullname: ".get_string('sessionduration', 'block_dedication').": ".fullname($user));
+$PAGE->set_title("$course->fullname: " . get_string('sessionduration', 'block_dedication') . ": " . fullname($user));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_context($context);
 
@@ -54,11 +54,14 @@ echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('timespentincourse', 'block_dedication'));
 $lastupdated = get_config('block_dedication', 'lastcalculated');
 if (!empty($lastupdated)) {
-    echo html_writer::span(get_string('lastupdated', 'block_dedication',
-        userdate($lastupdated, get_string('strftimedatetimeshort', 'core_langconfig'))), 'dimmed_text');
+    echo html_writer::span(get_string(
+        'lastupdated',
+        'block_dedication',
+        userdate($lastupdated, '%a, %d %b %y: %I:%M%p')
+    ), 'dimmed_text');
 }
 $usercontext = context_user::instance($user->id);
-$headerinfo = array('heading' => fullname($user), 'user' => $user, 'usercontext' => $usercontext);
+$headerinfo = ['heading' => fullname($user), 'user' => $user, 'usercontext' => $usercontext];
 echo $OUTPUT->context_header($headerinfo, 2);
 $sessionlimit = get_config('block_dedication', 'ignore_sessions_limit');
 if (!empty($sessionlimit)) {

@@ -45,7 +45,6 @@ use core_reportbuilder\local\helpers\database;
  * User dedication datasource.
  */
 class user_dedication extends datasource {
-
     /**
      * Return user friendly name of the datasource
      *
@@ -104,8 +103,7 @@ class user_dedication extends datasource {
             ->add_joins($userentity->get_joins())
             ->add_join($courseentity->get_context_join())
             ->add_join("LEFT JOIN {role_assignments} ras ON ras.contextid = {$context}.id AND ras.userid = {$user}.id")
-            ->add_join("LEFT JOIN {role} {$role} ON {$role}.id = ras.roleid")
-        );
+            ->add_join("LEFT JOIN {role} {$role} ON {$role}.id = ras.roleid"));
 
         // Join group entity.
         $groupentity = (new group())
@@ -123,8 +121,7 @@ class user_dedication extends datasource {
             ->add_joins($userentity->get_joins())
             ->add_join("
                 LEFT JOIN ({$groupsinnerselect}) {$groups}
-                       ON {$groups}.courseid = {$course}.id AND {$groups}.userid = {$user}.id")
-        );
+                       ON {$groups}.courseid = {$course}.id AND {$groups}.userid = {$user}.id"));
 
         // Join cohort entity.
         $cohortentity = new cohort();
@@ -135,8 +132,7 @@ class user_dedication extends datasource {
             ->add_joins([
                 "LEFT JOIN {cohort_members} {$cohortmemberalias} ON {$cohortmemberalias}.userid = {$user}.id",
                 "LEFT JOIN {cohort} {$cohortalias} ON {$cohortalias}.id = {$cohortmemberalias}.cohortid",
-            ])
-        );
+            ]));
 
         // Join completion entity.
         $completionentity = (new completion())
@@ -149,8 +145,7 @@ class user_dedication extends datasource {
             ->add_joins($userentity->get_joins())
             ->add_join("
                 LEFT JOIN {course_completions} {$completion}
-                       ON {$completion}.course = {$course}.id AND {$completion}.userid = {$user}.id")
-        );
+                       ON {$completion}.course = {$course}.id AND {$completion}.userid = {$user}.id"));
 
         // Join course access entity.
         $accessentity = (new access())
