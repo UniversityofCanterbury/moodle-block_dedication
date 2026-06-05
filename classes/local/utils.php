@@ -89,20 +89,17 @@ class utils {
         }
         $totalsecs = abs($totalsecs);
 
-        $hours = floor($totalsecs / HOURSECS);
-        $mins = floor(($totalsecs - ($hours * HOURSECS)) / MINSECS);
-
-        $sh = ($hours == 1) ? get_string('hour') : get_string('hours');
-        $sm = ($mins == 1) ? get_string('min') : get_string('mins');
+        $hours = (int) floor($totalsecs / HOURSECS);
+        $mins = (int) floor(($totalsecs - ($hours * HOURSECS)) / MINSECS);
 
         if ($hours && $mins) {
-            return $hours . ' ' . $sh . ' ' . $mins . ' ' . $sm;
+            return $hours . 'h ' . $mins . 'm';
         }
         if ($hours) {
-            return $hours . ' ' . $sh;
+            return $hours . 'h';
         }
         if ($mins) {
-            return $mins . ' ' . $sm;
+            return $mins . 'm';
         }
         return get_string('lessthanaminute', 'block_dedication');
     }
