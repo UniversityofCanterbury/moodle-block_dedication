@@ -16,7 +16,7 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
       <INDEXES>
-        <INDEX NAME="block_dedication" UNIQUE="false" FIELDS="userid, courseid"/>
+        <INDEX NAME="block_dedication" UNIQUE="false" FIELDS="userid, courseid" COMMENT="Per-user per-course dedication lookups"/>
         <INDEX NAME="blocdedi_coutimuse_ix" UNIQUE="false" FIELDS="courseid, timestart, userid" COMMENT="Optimise dedication average queries filtering by courseid and timestart range"/>
       </INDEXES>
     </TABLE>
