@@ -291,10 +291,10 @@ class utils {
         }
 
         $acefilteravailable = $filter
-            && class_exists('local_ace\external\filter_api')
-            && \local_ace\external\filter_api::has_active_filters($courseid);
+            && class_exists('local_ace\filter_api')
+            && \local_ace\filter_api::has_active_filters($courseid);
         if ($acefilteravailable) {
-            [$joinsql, $wheresql, $filterparams] = \local_ace\external\filter_api::get_filter_sql('studentattributes', $courseid);
+            [$joinsql, $wheresql, $filterparams] = \local_ace\filter_api::get_filter_sql('studentattributes', $courseid);
 
             // Filter path needs {user} u for filter JOINs that reference u.id / u.idnumber.
             $sql = "SELECT SUM(bd.timespent) AS total, COUNT(DISTINCT bd.userid) AS usercount
