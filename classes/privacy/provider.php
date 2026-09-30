@@ -56,6 +56,8 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
     /**
      * Get the list of users who have data within a context.
      *
+     * A dedication block belongs to a course; its users are the ones with dedication rows in that course.
+     *
      * @param userlist $userlist The userlist containing the list of users who have data in this context/plugin combination.
      */
     public static function get_users_in_context(userlist $userlist) {
@@ -63,8 +65,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         if (!$context instanceof context_block) {
             return;
         }
-        $sql = "SELECT DISTINCT(userid) FROM {block_dedication}";
-        $userlist->add_from_sql('userid', $sql, []);
+        $coursecontext = $context->get_course_context(false);
+        if (!$coursecontext) {
+            return;
+        }
+        $sql = "SELECT DISTINCT(userid) FROM {block_dedication} WHERE courseid = :courseid";
+        $userlist->add_from_sql('userid', $sql, ['courseid' => $coursecontext->instanceid]);
     }
 
     /**
@@ -83,8 +89,7 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
     /**
      * Get the list of contexts that contain user information for the specified user.
      *
-     * In the case of attendance, that is any attendance where a student has had their
-     * attendance taken or has taken attendance for someone else.
+     * That is the context of every dedication block in a course the user has dedication rows for.
      *
      * @param int $userid The user to search.
      * @return contextlist $contextlist The contextlist containing the list of contexts used in this plugin.
@@ -93,9 +98,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         return (new contextlist())->add_from_sql(
             "SELECT cx.id
             FROM {block_dedication} bd
-            JOIN {context} cx ON cx.contextlevel = :blocklevel AND cx.instanceid = bd.id
+            JOIN {context} ccx ON ccx.contextlevel = :courselevel AND ccx.instanceid = bd.courseid
+            JOIN {block_instances} bi ON bi.parentcontextid = ccx.id AND bi.blockname = 'dedication'
+            JOIN {context} cx ON cx.contextlevel = :blocklevel AND cx.instanceid = bi.id
             WHERE bd.userid = :userid",
             [
+                'courselevel' => CONTEXT_COURSE,
                 'blocklevel' => CONTEXT_BLOCK,
                 'userid' => $userid,
             ]
