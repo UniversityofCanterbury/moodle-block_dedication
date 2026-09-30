@@ -17,6 +17,7 @@
 namespace block_dedication;
 
 use block_dedication\privacy\provider;
+use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\tests\provider_testcase;
 
@@ -137,5 +138,49 @@ final class privacy_provider_test extends provider_testcase {
             'userid' => $this->userb->id, 'courseid' => $blockless->id, 'timespent' => 60, 'timestart' => time(),
         ]);
         $this->assertEquals([$this->blockb->id], provider::get_contexts_for_userid($this->userb->id)->get_contextids());
+    }
+
+    /**
+     * Deleting a user's data in a block context removes their rows for that block's course only.
+     */
+    public function test_delete_data_for_user_in_block_context(): void {
+        global $DB;
+
+        // The user also has rows in course B, which are not in the approved contexts.
+        $DB->insert_record('block_dedication', (object) [
+            'userid' => $this->usera->id, 'courseid' => $this->courseb->id, 'timespent' => 120, 'timestart' => time(),
+        ]);
+
+        provider::delete_data_for_user(new approved_contextlist($this->usera, 'block_dedication', [$this->blocka->id]));
+
+        $this->assertEquals(0, $DB->count_records('block_dedication', ['userid' => $this->usera->id, 'courseid' => $this->coursea->id]));
+        $this->assertEquals(1, $DB->count_records('block_dedication', ['userid' => $this->usera->id, 'courseid' => $this->courseb->id]));
+        $this->assertEquals(1, $DB->count_records('block_dedication', ['userid' => $this->userb->id]));
+    }
+
+    /**
+     * Deleting everything in a block context removes every row for that block's course only.
+     */
+    public function test_delete_data_for_all_users_in_block_context(): void {
+        global $DB;
+
+        provider::delete_data_for_all_users_in_context($this->blocka);
+
+        $this->assertEquals(0, $DB->count_records('block_dedication', ['courseid' => $this->coursea->id]));
+        $this->assertEquals(1, $DB->count_records('block_dedication', ['courseid' => $this->courseb->id]));
+    }
+
+    /**
+     * Course and user contexts keep working as before.
+     */
+    public function test_delete_data_in_course_and_user_contexts(): void {
+        global $DB;
+
+        provider::delete_data_for_all_users_in_context(\context_course::instance($this->courseb->id));
+        $this->assertEquals(0, $DB->count_records('block_dedication', ['courseid' => $this->courseb->id]));
+
+        $usercontext = \context_user::instance($this->usera->id);
+        provider::delete_data_for_user(new approved_contextlist($this->usera, 'block_dedication', [$usercontext->id]));
+        $this->assertEquals(0, $DB->count_records('block_dedication', ['userid' => $this->usera->id]));
     }
 }
