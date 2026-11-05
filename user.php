@@ -43,7 +43,7 @@ if ($userid !== (int) $USER->id) {
 
 $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
 
-$PAGE->set_url('/block/dedication/user.php', ['id' => $courseid, 'userid' => $userid]);
+$PAGE->set_url('/blocks/dedication/user.php', ['id' => $courseid, 'userid' => $userid]);
 $PAGE->set_pagelayout('report');
 $PAGE->add_body_class('limitedwidth');
 $PAGE->set_title("$course->fullname: " . get_string('sessionduration', 'block_dedication') . ": " . fullname($user));
