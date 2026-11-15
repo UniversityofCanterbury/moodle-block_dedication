@@ -56,6 +56,8 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
     /**
      * Get the list of users who have data within a context.
      *
+     * A dedication block belongs to a course; its users are the ones with dedication rows in that course.
+     *
      * @param userlist $userlist The userlist containing the list of users who have data in this context/plugin combination.
      */
     public static function get_users_in_context(userlist $userlist) {
@@ -63,8 +65,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         if (!$context instanceof context_block) {
             return;
         }
-        $sql = "SELECT DISTINCT(userid) FROM {block_dedication}";
-        $userlist->add_from_sql('userid', $sql, []);
+        $coursecontext = $context->get_course_context(false);
+        if (!$coursecontext) {
+            return;
+        }
+        $sql = "SELECT DISTINCT(userid) FROM {block_dedication} WHERE courseid = :courseid";
+        $userlist->add_from_sql('userid', $sql, ['courseid' => $coursecontext->instanceid]);
     }
 
     /**
@@ -83,8 +89,7 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
     /**
      * Get the list of contexts that contain user information for the specified user.
      *
-     * In the case of attendance, that is any attendance where a student has had their
-     * attendance taken or has taken attendance for someone else.
+     * That is the context of every dedication block in a course the user has dedication rows for.
      *
      * @param int $userid The user to search.
      * @return contextlist $contextlist The contextlist containing the list of contexts used in this plugin.
@@ -93,9 +98,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         return (new contextlist())->add_from_sql(
             "SELECT cx.id
             FROM {block_dedication} bd
-            JOIN {context} cx ON cx.contextlevel = :blocklevel AND cx.instanceid = bd.id
+            JOIN {context} ccx ON ccx.contextlevel = :courselevel AND ccx.instanceid = bd.courseid
+            JOIN {block_instances} bi ON bi.parentcontextid = ccx.id AND bi.blockname = 'dedication'
+            JOIN {context} cx ON cx.contextlevel = :blocklevel AND cx.instanceid = bi.id
             WHERE bd.userid = :userid",
             [
+                'courselevel' => CONTEXT_COURSE,
                 'blocklevel' => CONTEXT_BLOCK,
                 'userid' => $userid,
             ]
@@ -105,12 +113,15 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
     /**
      * Delete all personal data for all users in the specified context.
      *
-     * @param context $context Context to delete data from.
+     * A dedication block's data is its course's rows, so a block context deletes the same rows as its course context.
+     *
+     * @param \context $context Context to delete data from.
      */
     public static function delete_data_for_all_users_in_context(\context $context) {
         global $DB;
-        if ($context instanceof \context_course) {
-            $DB->delete_records('block_dedication', ['courseid' => $context->instanceid]);
+        $courseid = self::courseid_from_context($context);
+        if ($courseid) {
+            $DB->delete_records('block_dedication', ['courseid' => $courseid]);
         }
     }
 
@@ -125,10 +136,30 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         foreach ($contextlist as $context) {
             if ($context instanceof \context_user) {
                 $DB->delete_records('block_dedication', ['userid' => $userid]);
-            } else if ($context instanceof \context_course) {
-                $DB->delete_records('block_dedication', ['userid' => $userid, 'courseid' => $context->instanceid]);
+                continue;
+            }
+            $courseid = self::courseid_from_context($context);
+            if ($courseid) {
+                $DB->delete_records('block_dedication', ['userid' => $userid, 'courseid' => $courseid]);
             }
         }
+    }
+
+    /**
+     * The course whose dedication rows a context stands for: a course context, or a block inside one.
+     *
+     * @param \context $context The context.
+     * @return int The course id, or 0 when the context is neither.
+     */
+    private static function courseid_from_context(\context $context): int {
+        if ($context instanceof \context_course) {
+            return (int) $context->instanceid;
+        }
+        if ($context instanceof context_block) {
+            $coursecontext = $context->get_course_context(false);
+            return $coursecontext ? (int) $coursecontext->instanceid : 0;
+        }
+        return 0;
     }
 
     /**
