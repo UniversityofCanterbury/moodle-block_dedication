@@ -22,6 +22,7 @@
  * @author Pramith Dayananda <pramithd@catalyst.net.nz>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
 namespace block_dedication\local;
 
 use block_dedication\local\utils;
