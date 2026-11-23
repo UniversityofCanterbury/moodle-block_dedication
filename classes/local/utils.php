@@ -23,6 +23,7 @@
  */
 
 namespace block_dedication\local;
+
 /**
  * Utils helper class.
  */
